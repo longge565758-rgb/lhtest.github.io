@@ -236,7 +236,8 @@
   <div class="bottom-bar">
     <div class="input-group">
       <label for="subValue">减去数值:</label>
-      <input type="number" id="subValue" step="0.01" placeholder="0.00">
+      <!-- 设置默认值为 0.99 -->
+      <input type="number" id="subValue" step="0.01" value="0.99" placeholder="0.00">
     </div>
     <div class="btn-group">
       <button class="btn btn-reset" onclick="clearSelection()">取消</button>
@@ -258,7 +259,7 @@
         id: num,
         numStr: num < 10 ? '0' + num : '' + num,
         color: color,
-        value: 47.04,
+        value: 47.03,
         selected: false
       };
     });
@@ -313,12 +314,13 @@
 
       ballsData.forEach(item => {
         if (item.selected) {
-          item.value = 47.04 - inputVal;
+          item.value = 47.03 - inputVal;
           item.selected = false;
         }
       });
 
-      input.value = '';
+      // 提交后保持默认值 0.99
+      input.value = '0.99';
       input.blur(); // 强制取消文本框焦点，收起手机键盘
 
       renderGrid();
