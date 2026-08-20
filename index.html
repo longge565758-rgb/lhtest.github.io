@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>特码选号</title>
   <style>
     * {
@@ -12,21 +12,23 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    body {
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden; /* 禁止整体页面弹性橡皮筋滚动 */
+      position: fixed; /* 锁定 Safari 的视口 */
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background-color: #f7f9fc;
       color: #333;
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
     }
 
-    /* 容器布局 */
+    /* 容器布局：修复 iOS 视口高度问题 */
     .app-container {
       display: flex;
-      width: 100%;
-      height: 100vh;
+      width: 100vw;
+      height: 100%;
       padding-bottom: 60px; /* 留出底部提交栏空间 */
+      box-sizing: border-box;
     }
 
     /* 左侧菜单 */
@@ -35,7 +37,9 @@
       background-color: #eef3f8;
       border-right: 1px solid #d0d7de;
       flex-shrink: 0;
+      height: 100%;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .menu-item {
@@ -48,7 +52,6 @@
       color: #333;
       border-bottom: 1px solid #dbe2ea;
       background-color: #eef3f8;
-      cursor: pointer;
     }
 
     .menu-item.active {
@@ -57,10 +60,12 @@
       font-weight: bold;
     }
 
-    /* 右侧主内容区 */
+    /* 右侧主内容区：独立内部滚动 */
     .main-content {
       flex: 1;
+      height: 100%;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch; /* 开启 iOS 顺滑滚动 */
       padding: 8px 6px;
       background-color: #ffffff;
     }
@@ -69,6 +74,7 @@
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 6px;
+      padding-bottom: 12px;
     }
 
     /* 数字球卡片样式 */
@@ -124,17 +130,9 @@
     }
 
     /* 波色颜色 */
-    .ball.red {
-      background: radial-gradient(circle at 35% 35%, #ff6b6b, #d92323);
-    }
-
-    .ball.blue {
-      background: radial-gradient(circle at 35% 35%, #4dabf7, #0b6bcb);
-    }
-
-    .ball.green {
-      background: radial-gradient(circle at 35% 35%, #51cf66, #2b8a3e);
-    }
+    .ball.red { background: radial-gradient(circle at 35% 35%, #ff6b6b, #d92323); }
+    .ball.blue { background: radial-gradient(circle at 35% 35%, #4dabf7, #0b6bcb); }
+    .ball.green { background: radial-gradient(circle at 35% 35%, #51cf66, #2b8a3e); }
 
     /* 数值文本 */
     .ball-value {
@@ -174,7 +172,7 @@
     }
 
     .input-group input {
-      width: 90px;
+      width: 80px;
       height: 36px;
       border: 1px solid #ccc;
       border-radius: 4px;
@@ -189,12 +187,12 @@
 
     .btn-group {
       display: flex;
-      gap: 8px;
+      gap: 6px;
     }
 
     .btn {
       height: 36px;
-      padding: 0 14px;
+      padding: 0 12px;
       border-radius: 4px;
       font-size: 14px;
       font-weight: 500;
@@ -205,10 +203,6 @@
     .btn-submit {
       background-color: #1a60c3;
       color: #fff;
-    }
-
-    .btn-submit:active {
-      background-color: #124997;
     }
 
     .btn-reset {
@@ -233,7 +227,7 @@
     </div>
 
     <!-- 右侧数字球区域 -->
-    <div class="main-content">
+    <div class="main-content" id="mainContent">
       <div class="grid-container" id="ballGrid"></div>
     </div>
   </div>
@@ -245,23 +239,20 @@
       <input type="number" id="subValue" step="0.01" placeholder="0.00">
     </div>
     <div class="btn-group">
-      <button class="btn btn-reset" onclick="clearSelection()">取消选择</button>
+      <button class="btn btn-reset" onclick="clearSelection()">取消</button>
       <button class="btn btn-submit" onclick="submitChanges()">提交</button>
     </div>
   </div>
 
   <script>
-    // 红波、蓝波、绿波列表
     const RED_BALLS = [1, 2, 7, 8, 12, 13, 18, 19, 23, 24, 29, 30, 34, 35, 40, 45, 46];
     const BLUE_BALLS = [3, 4, 9, 10, 14, 15, 20, 25, 26, 31, 36, 37, 41, 42, 47, 48];
-    const GREEN_BALLS = [5, 6, 11, 16, 17, 21, 22, 27, 28, 32, 33, 38, 39, 43, 44, 49];
 
-    // 初始化 01-49 数据
     const ballsData = Array.from({ length: 49 }, (_, i) => {
       const num = i + 1;
-      let color = 'red';
+      let color = 'green';
+      if (RED_BALLS.includes(num)) color = 'red';
       if (BLUE_BALLS.includes(num)) color = 'blue';
-      if (GREEN_BALLS.includes(num)) color = 'green';
 
       return {
         id: num,
@@ -272,7 +263,6 @@
       };
     });
 
-    // 渲染页面
     function renderGrid() {
       const grid = document.getElementById('ballGrid');
       grid.innerHTML = '';
@@ -292,19 +282,16 @@
       });
     }
 
-    // 切换选中状态
     function toggleSelect(index) {
       ballsData[index].selected = !ballsData[index].selected;
       renderGrid();
     }
 
-    // 清除选中
     function clearSelection() {
       ballsData.forEach(item => item.selected = false);
       renderGrid();
     }
 
-    // 提交修改数值 (47.03 - 文本框数值)
     function submitChanges() {
       const input = document.getElementById('subValue');
       const inputVal = parseFloat(input.value);
@@ -316,23 +303,30 @@
 
       const selectedItems = ballsData.filter(item => item.selected);
       if (selectedItems.length === 0) {
-        alert('请先勾选需要修改的数字球');
+        alert('请先选择需要修改的数字球');
         return;
       }
 
-      // 选中的数字球数值更新为：47.03 - 输入值
+      // 记录当前右侧窗口的滚动位置，更新后自动还原
+      const mainContent = document.getElementById('mainContent');
+      const currentScrollTop = mainContent.scrollTop;
+
       ballsData.forEach(item => {
         if (item.selected) {
           item.value = 47.03 - inputVal;
-          item.selected = false; // 提交后取消选中
+          item.selected = false;
         }
       });
 
       input.value = '';
+      input.blur(); // 强制取消文本框焦点，收起手机键盘
+
       renderGrid();
+
+      // 保持之前的滚动高度
+      mainContent.scrollTop = currentScrollTop;
     }
 
-    // 页面初始化加载
     renderGrid();
   </script>
 </body>
